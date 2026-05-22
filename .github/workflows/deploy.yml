@@ -43,8 +43,12 @@ jobs:
           ls -la dist/
           echo "=== dist/assets directory ==="
           ls -la dist/assets/
-          echo "=== index.html references ==="
-          grep -E "src=|href=" dist/index.html
+          echo "=== index.html ==="
+          cat dist/index.html
+
+      - name: Add cache-busting meta tags
+        run: |
+          sed -i 's/<head>/<head>\n    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n    <meta http-equiv="Pragma" content="no-cache">\n    <meta http-equiv="Expires" content="0">/' dist/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
