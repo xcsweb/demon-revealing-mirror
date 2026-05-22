@@ -15,10 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,41 +25,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
-      - name: Clean install dependencies
-        run: |
-          rm -rf node_modules package-lock.json dist
-          npm install
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
         run: npm run build
-
-      - name: Verify dist contents
-        run: |
-          echo "=== dist directory ==="
-          ls -la dist/
-          echo "=== dist/assets directory ==="
-          ls -la dist/assets/
-          echo "=== index.html ==="
-          cat dist/index.html
-
-      - name: Add cache-busting meta tags
-        run: |
-          sed -i 's/<head>/<head>\n    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n    <meta http-equiv="Pragma" content="no-cache">\n    <meta http-equiv="Expires" content="0">/' dist/index.html
-
-      - name: Add cache-busting query params to assets
-        run: |
-          TIMESTAMP=$(date +%s)
-          sed -i "s|src=\"\([^\"]*\)\"|src=\"\1?v=$TIMESTAMP\"|g" dist/index.html
-          sed -i "s|href=\"\([^\"]*\)\"|href=\"\1?v=$TIMESTAMP\"|g" dist/index.html
-          echo "=== Updated index.html ==="
-          cat dist/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
