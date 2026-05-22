@@ -19,7 +19,7 @@ export function useFaceDetection(videoElement: HTMLVideoElement | null, options:
     
     try {
       faceDetection = new FaceDetection({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/${file}`
       });
       
       faceDetectionRef.current = faceDetection;

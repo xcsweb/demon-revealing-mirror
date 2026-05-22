@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>照妖镜 - 测试页面</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      color: white;
+    }
+    h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+    .status {
+      margin-top: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    .success {
+      color: #4ade80;
+    }
+    .error {
+      color: #f87171;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 照妖镜</h1>
+    <p>如果能看到这个页面，说明HTML和CSS加载正常</p>
+    <div class="status" id="status">
+      <p>正在检查JavaScript加载...</p>
+    </div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+
+    try {
+      // 测试基本的JavaScript执行
+      console.log('测试: JavaScript执行正常');
+
+      // 检查React是否存在
+      if (typeof window.React !== 'undefined') {
+        statusEl.innerHTML = '<p class="success">✅ React已加载</p>';
+      } else {
+        statusEl.innerHTML = '<p class="warning">⚠️ React未加载（这是正常的，如果使用模块化打包）</p>';
+      }
+
+      // 检查DOM
+      const root = document.getElementById('root');
+      if (root) {
+        console.log('测试: DOM根元素存在');
+        statusEl.innerHTML += '<p class="success">✅ DOM根元素存在</p>';
+      }
+
+      // 测试fetch
+      fetch('/demon-revealing-mirror/')
+        .then(response => {
+          statusEl.innerHTML += '<p class="success">✅ Fetch API正常</p>';
+          return response.text();
+        })
+        .then(html => {
+          if (html.includes('照妖镜')) {
+            statusEl.innerHTML += '<p class="success">✅ HTML内容正确</p>';
+          }
+        })
+        .catch(error => {
+          statusEl.innerHTML += `<p class="error">❌ Fetch失败: ${error.message}</p>`;
+        });
+
+      // 测试Canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = 100;
+      canvas.height = 100;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        statusEl.innerHTML += '<p class="success">✅ Canvas API可用</p>';
+      }
+
+      // 测试摄像头API
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        statusEl.innerHTML += '<p class="success">✅ 摄像头API可用</p>';
+      } else {
+        statusEl.innerHTML += '<p class="warning">⚠️ 摄像头API不可用（可能需要HTTPS）</p>';
+      }
+
+      statusEl.innerHTML += '<p class="success">✅ 基础检查全部通过</p>';
+
+    } catch (error) {
+      statusEl.innerHTML = `<p class="error">❌ JavaScript错误: ${error.message}</p>`;
+      console.error('测试失败:', error);
+    }
+  </script>
+</body>
+</html>

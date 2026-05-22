@@ -1,0 +1,41 @@
+
+📋 [2026-05-22T16:08:47.293Z] 🌐 照妖镜项目 - 浏览器渲染测试工具
+ℹ️ [2026-05-22T16:08:47.295Z] 📍 测试目标: http://localhost:4173/demon-revealing-mirror/
+ℹ️ [2026-05-22T16:08:47.311Z] 📅 测试时间: 2026/5/22 16:08:47
+ℹ️ [2026-05-22T16:08:47.311Z] 
+🚀 启动浏览器...
+❌ [2026-05-22T16:08:47.322Z] 
+❌ 测试过程中发生错误: browserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     npx playwright install                                 ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+❌ [2026-05-22T16:08:47.322Z] 错误详情: browserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     npx playwright install                                 ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+    at main (/workspace/browser-tester.mjs:45:30)
+    at /workspace/browser-tester.mjs:269:1
+    at async node:internal/modules/esm/loader:639:26
+
+browserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     npx playwright install                                 ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+    at main (/workspace/browser-tester.mjs:45:30)
+    at /workspace/browser-tester.mjs:269:1
+    at async node:internal/modules/esm/loader:639:26
