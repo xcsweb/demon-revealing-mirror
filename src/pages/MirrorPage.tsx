@@ -225,9 +225,6 @@ export function MirrorPage() {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-8xl">{currentMonster.emoji}</span>
-                </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
               </div>
 
@@ -253,13 +250,6 @@ export function MirrorPage() {
                 </button>
               </div>
             </div>
-
-            <button
-              onClick={handleReset}
-              className="mt-6 w-full py-4 text-white bg-gray-800 rounded-2xl font-bold hover:bg-gray-700 transition-colors"
-            >
-              🔄 再测一次
-            </button>
           </div>
         </div>
       )}
