@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, Download, Share2 } from 'lucide-react';
 import { useCamera } from '@/hooks/useCamera';
 import { useFaceDetection } from '@/hooks/useFaceDetection';
 import { useMirrorStore } from '@/store/useMirrorStore';
-import html2canvas from 'html2canvas';
 
 
 type Phase = 'idle' | 'detecting' | 'blackout' | 'story' | 'card' | 'result';
@@ -20,12 +19,10 @@ export function MirrorPage() {
   } = useMirrorStore();
 
   const { videoRef, error } = useCamera(facingMode);
-  const cardRef = useRef<HTMLDivElement>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [storyIndex, setStoryIndex] = useState(0);
   const [imageLoadError, setImageLoadError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleFaceDetected = useCallback((box: any, landmarks: any) => {
@@ -62,7 +59,6 @@ export function MirrorPage() {
     if (phase === 'story' && currentMonster) {
       // 进入 story 阶段时重置图片状态
       setImageLoadError(false);
-      setImageLoading(true);
       
       if (storyIndex < currentMonster.story.length) {
         const timer = setTimeout(() => {
@@ -86,31 +82,24 @@ export function MirrorPage() {
     setPhase('idle');
     setStoryIndex(0);
     setImageLoadError(false);
-    setImageLoading(true);
     resetMonster();
   };
 
   const handleSave = async () => {
-    if (!cardRef.current || !currentMonster) return;
+    if (!currentMonster) return;
     
     setIsSaving(true);
     
     try {
-      // 等待图片加载完成
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: '#111827',
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        imageTimeout: 0,
-      });
+      const response = await fetch(`/images/monsters/${currentMonster.id}.png`);
+      const blob = await response.blob();
       
       const link = document.createElement('a');
-      link.download = `${currentMonster.name}-${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.download = `${currentMonster.name}.png`;
+      link.href = URL.createObjectURL(blob);
       link.click();
+      
+      URL.revokeObjectURL(link.href);
     } catch (error) {
       console.error('保存失败:', error);
       alert('保存失败，请重试');
@@ -146,8 +135,7 @@ export function MirrorPage() {
 
   const getMonsterImageUrl = () => {
     if (!currentMonster) return '';
-    const encodedPrompt = encodeURIComponent(currentMonster.imagePrompt);
-    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=600&height=800&nologo=true&model=flux&seed=${currentMonster.id}`;
+    return `/images/monsters/${currentMonster.id}.png`;
   };
 
   if (error) {
@@ -230,52 +218,40 @@ export function MirrorPage() {
       {phase === 'card' && currentMonster && (
         <div className="absolute inset-0 bg-black/95 z-40 flex items-center justify-center p-6">
           <div className="w-full max-w-sm">
-            <div ref={cardRef}>
-              <div
-                className="bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-2 animate-fadeIn"
-                style={{ borderColor: currentMonster.color }}
-              >
-                <div className="aspect-[3/4] bg-gray-800 relative overflow-hidden">
-                  {imageLoading && !imageLoadError && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
-                      <div className="text-center">
-                        <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
-                        <p className="text-gray-400 text-sm">正在生成图片...</p>
-                      </div>
-                    </div>
-                  )}
-                  <img
-                    src={getMonsterImageUrl()}
-                    alt={currentMonster.name}
-                    className="w-full h-full object-cover"
-                    onLoad={() => setImageLoading(false)}
-                    onError={() => {
-                      setImageLoading(false);
-                      setImageLoadError(true);
-                    }}
-                  />
-                  {imageLoadError && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                      <span className="text-8xl opacity-80">{currentMonster.emoji}</span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                </div>
-
-                <div className="p-6">
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <span className="text-4xl">{currentMonster.emoji}</span>
-                    <h2
-                      className="text-3xl font-bold"
-                      style={{ color: currentMonster.color }}
-                    >
-                      {currentMonster.name}
-                    </h2>
+            <div
+              className="bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-2 animate-fadeIn"
+              style={{ borderColor: currentMonster.color }}
+            >
+              <div className="aspect-[3/4] bg-gray-800 relative overflow-hidden">
+                <img
+                  src={getMonsterImageUrl()}
+                  alt={currentMonster.name}
+                  className="w-full h-full object-cover"
+                  onError={() => {
+                    setImageLoadError(true);
+                  }}
+                />
+                {imageLoadError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                    <span className="text-8xl opacity-80">{currentMonster.emoji}</span>
                   </div>
-                  <p className="text-gray-300 text-center mb-6">
-                    {currentMonster.description}
-                  </p>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              </div>
+
+              <div className="p-6">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <span className="text-4xl">{currentMonster.emoji}</span>
+                  <h2
+                    className="text-3xl font-bold"
+                    style={{ color: currentMonster.color }}
+                  >
+                    {currentMonster.name}
+                  </h2>
                 </div>
+                <p className="text-gray-300 text-center mb-6">
+                  {currentMonster.description}
+                </p>
               </div>
             </div>
 
