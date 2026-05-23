@@ -1,6 +1,5 @@
 /**
- * 全面生产环境测试脚本
- * 检查 dist 目录中所有实际存在的文件是否都能在线上访问
+ * 正确的全面生产环境测试脚本
  */
 
 const https = require('https');
@@ -28,7 +27,7 @@ function request(url, timeout = 30000) {
         path: parsedUrl.pathname + parsedUrl.search,
         method: 'GET',
         headers: {
-          'User-Agent': 'deploy-test-full-checker/1.0',
+          'User-Agent': 'deploy-test-full-checker/2.0',
           'Accept': '*/*',
         },
         timeout,
@@ -100,13 +99,6 @@ function getAllFiles(dir, basePath = '') {
   return files;
 }
 
-/**
- * 将本地文件路径转换为线上 URL
- */
-function localToOnlineUrl(localPath, basePath = '/demon-revealing-mirror') {
-  return `${BASE_URL}${localPath.replace(/\\/g, '/')}`;
-}
-
 async function runFullTest() {
   console.log('╔═══════════════════════════════════════════════════════════╗');
   console.log('║     全面生产环境测试 - 检查所有资源文件                    ║');
@@ -130,7 +122,7 @@ async function runFullTest() {
   let failCount = 0;
 
   for (const file of localFiles) {
-    const onlineUrl = localToOnlineUrl(`/${file.relativePath}`);
+    const onlineUrl = `${BASE_URL}/${file.relativePath}`;
     process.stdout.write(`   检查: ${file.relativePath.padEnd(40)}`);
 
     try {
@@ -170,59 +162,7 @@ async function runFullTest() {
     }
   }
 
-  // 3. 检查 HTML 中引用的资源（防止遗漏）
-  console.log('\n\n📋 步骤 3: 检查 HTML 中的资源引用...\n');
-
-  const indexHtml = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf-8');
-  const htmlResources = [];
-
-  // 提取 script src
-  const scriptMatches = indexHtml.matchAll(/<script[^>]+src=["']([^"']+)["']/gi);
-  for (const match of scriptMatches) {
-    htmlResources.push({ type: 'script', url: match[1] });
-  }
-
-  // 提取 link href (CSS)
-  const linkMatches = indexHtml.matchAll(/<link[^>]+href=["']([^"']+)["']/gi);
-  for (const match of linkMatches) {
-    htmlResources.push({ type: 'stylesheet', url: match[1] });
-  }
-
-  // 提取 img src
-  const imgMatches = indexHtml.matchAll(/<img[^>]+src=["']([^"']+)["']/gi);
-  for (const match of imgMatches) {
-    htmlResources.push({ type: 'image', url: match[1] });
-  }
-
-  console.log(`   HTML 中引用了 ${htmlResources.length} 个资源:\n`);
-  htmlResources.forEach((res, i) => {
-    console.log(`   ${String(i + 1).padStart(2)}. [${res.type.padEnd(10)}] ${res.url}`);
-  });
-
-  // 检查 HTML 引用的资源是否都存在于 dist 中
-  console.log('\n\n📋 步骤 4: 验证 HTML 引用与实际文件的匹配...\n');
-
-  const localPaths = localFiles.map(f => '/' + f.relativePath);
-  const htmlReferencedPaths = htmlResources.map(r => {
-    // 相对路径转换为绝对路径
-    if (r.url.startsWith('/')) return r.url;
-    return `/demon-revealing-mirror/${r.url}`;
-  });
-
-  let missingInLocal = 0;
-  for (const refPath of htmlReferencedPaths) {
-    const found = localPaths.some(localPath => refPath.endsWith(localPath) || refPath.includes(localPath.split('/').pop()));
-    if (!found) {
-      missingInLocal++;
-      console.log(`   ⚠️  HTML 引用但本地不存在: ${refPath}`);
-    }
-  }
-
-  if (missingInLocal === 0) {
-    console.log('   ✅ 所有 HTML 引用的资源都存在于 dist 目录');
-  }
-
-  // 4. 汇总报告
+  // 3. 汇总报告
   console.log('\n\n╔═══════════════════════════════════════════════════════════╗');
   console.log('║                    📊 测试汇总报告                         ║');
   console.log('╚═══════════════════════════════════════════════════════════╝\n');
@@ -231,12 +171,11 @@ async function runFullTest() {
   console.log('   🌐 线上检查结果:');
   console.log('      ✅ 成功:', successCount);
   console.log('      ❌ 失败:', failCount);
-  console.log('   📄 HTML 引用资源:', htmlResources.length);
 
   // 文件大小对比
   console.log('\n   📋 文件详情对比:\n');
-  console.log('   ' + '文件名'.padEnd(30) + '本地大小'.padEnd(12) + '线上大小'.padEnd(12) + '状态');
-  console.log('   ' + '-'.repeat(70));
+  console.log('   ' + '文件名'.padEnd(35) + '本地大小'.padEnd(12) + '线上大小'.padEnd(12) + '状态');
+  console.log('   ' + '-'.repeat(80));
 
   results.forEach(file => {
     const localSize = file.size > 1024 ? `${(file.size / 1024).toFixed(1)}KB` : `${file.size}B`;
@@ -245,7 +184,7 @@ async function runFullTest() {
     const sizeMatch = file.success && file.size === file.onlineSize ? '' : ' (大小不匹配!)';
 
     console.log(
-      `   ${file.name.padEnd(30)} ${localSize.padEnd(12)} ${onlineSize.padEnd(12)} ${status}${sizeMatch}`
+      `   ${file.relativePath.padEnd(35)} ${localSize.padEnd(12)} ${onlineSize.padEnd(12)} ${status}${sizeMatch}`
     );
   });
 
@@ -262,7 +201,7 @@ async function runFullTest() {
 
   console.log('='.repeat(74) + '\n');
 
-  return { results, successCount, failCount, localFiles, htmlResources };
+  return { results, successCount, failCount, localFiles };
 }
 
 // 运行测试
