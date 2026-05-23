@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Download, Share2 } from 'lucide-react';
 import { useCamera } from '@/hooks/useCamera';
 import { useFaceDetection } from '@/hooks/useFaceDetection';
 import { useMirrorStore } from '@/store/useMirrorStore';
+import html2canvas from 'html2canvas';
 
 
 type Phase = 'idle' | 'detecting' | 'blackout' | 'story' | 'card' | 'result';
@@ -19,10 +20,12 @@ export function MirrorPage() {
   } = useMirrorStore();
 
   const { videoRef, error } = useCamera(facingMode);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [storyIndex, setStoryIndex] = useState(0);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleFaceDetected = useCallback((box: any, landmarks: any) => {
     if (phase === 'idle') {
@@ -82,6 +85,54 @@ export function MirrorPage() {
     setStoryIndex(0);
     setImageLoadError(false);
     resetMonster();
+  };
+
+  const handleSave = async () => {
+    if (!cardRef.current || !currentMonster) return;
+    
+    setIsSaving(true);
+    
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: '#111827',
+        scale: 2,
+        useCORS: true,
+      });
+      
+      const link = document.createElement('a');
+      link.download = `${currentMonster.name}-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error('保存失败:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!currentMonster) return;
+    
+    const shareText = `测了照妖镜！原来我是${currentMonster.name}！${currentMonster.description}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: '照妖镜结果',
+          text: shareText,
+        });
+      } catch (error) {
+        console.log('分享取消或失败');
+      }
+    } else {
+      // 如果不支持分享，复制到剪贴板
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert('已复制到剪贴板！');
+      } catch (error) {
+        console.error('复制失败:', error);
+      }
+    }
   };
 
   const getMonsterImageUrl = () => {
@@ -170,46 +221,67 @@ export function MirrorPage() {
       {phase === 'card' && currentMonster && (
         <div className="absolute inset-0 bg-black/95 z-40 flex items-center justify-center p-6">
           <div className="w-full max-w-sm">
-            <div
-              className="bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-2 animate-fadeIn"
-              style={{ borderColor: currentMonster.color }}
-            >
-              <div className="aspect-[3/4] bg-gray-800 relative overflow-hidden">
-                <img
-                  src={getMonsterImageUrl()}
-                  alt={currentMonster.name}
-                  className="w-full h-full object-cover"
-                  onError={() => {
-                    setImageLoadError(true);
-                  }}
-                />
-                {imageLoadError && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                    <span className="text-8xl opacity-80">{currentMonster.emoji}</span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              </div>
-
-              <div className="p-6">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <span className="text-4xl">{currentMonster.emoji}</span>
-                  <h2
-                    className="text-3xl font-bold"
-                    style={{ color: currentMonster.color }}
-                  >
-                    {currentMonster.name}
-                  </h2>
+            <div ref={cardRef}>
+              <div
+                className="bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-2 animate-fadeIn"
+                style={{ borderColor: currentMonster.color }}
+              >
+                <div className="aspect-[3/4] bg-gray-800 relative overflow-hidden">
+                  <img
+                    src={getMonsterImageUrl()}
+                    alt={currentMonster.name}
+                    className="w-full h-full object-cover"
+                    onError={() => {
+                      setImageLoadError(true);
+                    }}
+                  />
+                  {imageLoadError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                      <span className="text-8xl opacity-80">{currentMonster.emoji}</span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 </div>
-                <p className="text-gray-300 text-center mb-6">
-                  {currentMonster.description}
-                </p>
+
+                <div className="p-6">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <span className="text-4xl">{currentMonster.emoji}</span>
+                    <h2
+                      className="text-3xl font-bold"
+                      style={{ color: currentMonster.color }}
+                    >
+                      {currentMonster.name}
+                    </h2>
+                  </div>
+                  <p className="text-gray-300 text-center mb-6">
+                    {currentMonster.description}
+                  </p>
+                </div>
               </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex-1 flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 disabled:opacity-50 text-white rounded-2xl font-bold transition-colors"
+              >
+                <Download className="w-5 h-5" />
+                {isSaving ? '保存中...' : '保存'}
+              </button>
+
+              <button
+                onClick={handleShare}
+                className="flex-1 flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-2xl font-bold transition-colors"
+              >
+                <Share2 className="w-5 h-5" />
+                分享
+              </button>
             </div>
 
             <button
               onClick={handleReset}
-              className="mt-6 w-full py-4 text-white bg-gray-800 rounded-2xl font-bold hover:bg-gray-700 transition-colors"
+              className="mt-3 w-full py-4 text-white bg-gray-800 rounded-2xl font-bold hover:bg-gray-700 transition-colors"
             >
               🔄 再测一次
             </button>
