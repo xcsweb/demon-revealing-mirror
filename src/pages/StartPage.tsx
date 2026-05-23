@@ -26,7 +26,7 @@ export function StartPage() {
 
         {/* 副标题 */}
         <p className="text-purple-200 text-lg md:text-xl mb-12 text-center max-w-md leading-relaxed">
-          体验神奇的人脸检测与特效叠加，探索神秘的视觉世界
+          照妖镜已就绪，对准人脸即可揭示你的妖怪真身
         </p>
 
         {/* 开始按钮 */}
