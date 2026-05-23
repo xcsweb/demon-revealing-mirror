@@ -22,6 +22,7 @@ export function MirrorPage() {
   const [videoReady, setVideoReady] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [storyIndex, setStoryIndex] = useState(0);
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   const handleFaceDetected = useCallback((box: any, landmarks: any) => {
     if (phase === 'idle') {
@@ -55,6 +56,9 @@ export function MirrorPage() {
 
   useEffect(() => {
     if (phase === 'story' && currentMonster) {
+      // 进入 story 阶段时重置 imageLoadError
+      setImageLoadError(false);
+      
       if (storyIndex < currentMonster.story.length) {
         const timer = setTimeout(() => {
           setStoryIndex(prev => prev + 1);
@@ -76,6 +80,7 @@ export function MirrorPage() {
   const handleReset = () => {
     setPhase('idle');
     setStoryIndex(0);
+    setImageLoadError(false);
     resetMonster();
   };
 
@@ -174,13 +179,15 @@ export function MirrorPage() {
                   src={getMonsterImageUrl()}
                   alt={currentMonster.name}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
+                  onError={() => {
+                    setImageLoadError(true);
                   }}
                 />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-8xl opacity-80">{currentMonster.emoji}</span>
-                </div>
+                {imageLoadError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                    <span className="text-8xl opacity-80">{currentMonster.emoji}</span>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
               </div>
 
