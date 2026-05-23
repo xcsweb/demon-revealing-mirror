@@ -1,0 +1,25 @@
+{
+  "name": "deploy-test",
+  "version": "1.0.0",
+  "description": "前端项目部署测试工具，覆盖本地开发测试、构建验证、线上资源检查和功能测试",
+  "main": "index.js",
+  "bin": {
+    "deploy-test": "./index.js",
+    "check-deploy": "./index.js"
+  },
+  "scripts": {
+    "test": "node index.js"
+  },
+  "keywords": [
+    "deploy",
+    "test",
+    "frontend",
+    "build",
+    "check"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

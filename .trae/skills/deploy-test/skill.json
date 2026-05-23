@@ -1,0 +1,34 @@
+{
+  "name": "deploy-test",
+  "description": "前端项目部署测试工具，覆盖本地开发测试、构建验证、线上资源检查和功能测试",
+  "version": "1.0.0",
+  "entry": "./index.js",
+  "commands": ["deploy-test", "check-deploy"],
+  "parameters": {
+    "projectPath": {
+      "type": "string",
+      "description": "项目路径",
+      "default": "."
+    },
+    "deployUrl": {
+      "type": "string",
+      "description": "部署后的线上 URL",
+      "default": ""
+    },
+    "timeout": {
+      "type": "number",
+      "description": "超时时间（默认 30000ms）",
+      "default": 30000
+    },
+    "skipBuild": {
+      "type": "boolean",
+      "description": "是否跳过构建（默认 false）",
+      "default": false
+    },
+    "skipOnline": {
+      "type": "boolean",
+      "description": "是否跳过线上检查（默认 false）",
+      "default": false
+    }
+  }
+}
