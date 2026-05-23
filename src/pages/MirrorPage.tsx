@@ -1,82 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, ArrowLeft, Shuffle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Shuffle } from 'lucide-react';
 import { useCamera } from '@/hooks/useCamera';
 import { useFaceDetection } from '@/hooks/useFaceDetection';
 import { useMirrorStore } from '@/store/useMirrorStore';
-import { drawMonsterEffect } from '@/utils/effects';
-import { clsx, type ClassValue } from 'clsx';
+import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-function cn(...inputs: ClassValue[]) {
+function cn(...inputs: any[]) {
   return twMerge(clsx(inputs));
 }
 
-// 用于平滑人脸框过渡的类
-class SmoothBoundingBox {
-  private current: { x: number; y: number; width: number; height: number } | null = null;
-  private target: { x: number; y: number; width: number; height: number } | null = null;
-  private alpha = 0.15; // 更平滑的系数
-  private lastNFrames: Array<{ x: number; y: number; width: number; height: number }> = [];
-  private maxFrames = 5;
-
-  update(target: { x: number; y: number; width: number; height: number } | null) {
-    this.target = target;
-    if (!this.current && target) {
-      this.current = { ...target };
-    }
-    if (target) {
-      this.lastNFrames.push({ ...target });
-      if (this.lastNFrames.length > this.maxFrames) {
-        this.lastNFrames.shift();
-      }
-    } else {
-      this.lastNFrames = [];
-    }
-  }
-
-  // 计算移动平均
-  private getAverage() {
-    if (this.lastNFrames.length === 0) return null;
-    const sum = { x: 0, y: 0, width: 0, height: 0 };
-    this.lastNFrames.forEach(box => {
-      sum.x += box.x;
-      sum.y += box.y;
-      sum.width += box.width;
-      sum.height += box.height;
-    });
-    const n = this.lastNFrames.length;
-    return {
-      x: sum.x / n,
-      y: sum.y / n,
-      width: sum.width / n,
-      height: sum.height / n
-    };
-  }
-
-  get() {
-    if (!this.target) {
-      this.current = null;
-      return null;
-    }
-
-    if (!this.current) {
-      this.current = { ...this.target };
-      return this.current;
-    }
-
-    // 使用移动平均后的目标值
-    const avgTarget = this.getAverage() || this.target;
-
-    // 平滑过渡
-    this.current.x += (avgTarget.x - this.current.x) * this.alpha;
-    this.current.y += (avgTarget.y - this.current.y) * this.alpha;
-    this.current.width += (avgTarget.width - this.current.width) * this.alpha;
-    this.current.height += (avgTarget.height - this.current.height) * this.alpha;
-
-    return this.current;
-  }
-}
+type Phase = 'idle' | 'detecting' | 'blackout' | 'story' | 'card' | 'result';
 
 export function MirrorPage() {
   const navigate = useNavigate();
@@ -85,42 +20,41 @@ export function MirrorPage() {
     toggleFacingMode,
     setFaceDetected,
     setCapturedImage,
-    faceBoundingBox,
     currentMonster,
     resetMonster,
+    setCurrentMonster
   } = useMirrorStore();
 
   const { videoRef, error } = useCamera(facingMode);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const smoothBoxRef = useRef<SmoothBoundingBox>(new SmoothBoundingBox());
   const [videoReady, setVideoReady] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
-  const lastBoxRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [storyIndex, setStoryIndex] = useState(0);
 
   const handleFaceDetected = useCallback((box: any, landmarks: any) => {
-    if (!lastBoxRef.current) {
-      resetMonster();
+    if (phase === 'idle') {
+      setPhase('detecting');
+      setTimeout(() => {
+        setPhase('blackout');
+        setTimeout(() => {
+          if (!currentMonster) {
+            resetMonster();
+          }
+          setPhase('story');
+        }, 800);
+      }, 1000);
     }
-    
-    // MediaPipe 返回的是归一化坐标，直接传递
     setFaceDetected(true, {
       x: box.xCenter - box.width / 2,
       y: box.yCenter - box.height / 2,
       width: box.width,
       height: box.height
     }, landmarks);
-    
-    lastBoxRef.current = {
-      x: box.xCenter - box.width / 2,
-      y: box.yCenter - box.height / 2,
-      width: box.width,
-      height: box.height
-    };
-  }, [setFaceDetected, resetMonster]);
+  }, [phase, setFaceDetected, resetMonster, currentMonster]);
 
   const handleFaceLost = useCallback(() => {
     setFaceDetected(false);
-    lastBoxRef.current = null;
   }, [setFaceDetected]);
 
   const { isReady: detectionReady, error: detectionError, isLoading: detectionLoading } = useFaceDetection(
@@ -129,50 +63,20 @@ export function MirrorPage() {
   );
 
   useEffect(() => {
-    if (!canvasRef.current || !videoRef.current) return;
-
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    const animate = () => {
-      if (video.readyState >= 2) {
-        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-        }
-
-        // 更新平滑器
-        smoothBoxRef.current.update(faceBoundingBox ? {
-          x: faceBoundingBox.x,
-          y: faceBoundingBox.y,
-          width: faceBoundingBox.width,
-          height: faceBoundingBox.height
-        } : null);
-        
-        const smoothBox = smoothBoxRef.current.get();
-
-        drawMonsterEffect(
-          ctx,
-          currentMonster,
-          smoothBox ? {
-            xCenter: smoothBox.x + (smoothBox.width / 2),
-            yCenter: smoothBox.y + (smoothBox.height / 2),
-            width: smoothBox.width,
-            height: smoothBox.height
-          } : null,
-          canvas.width,
-          canvas.height
-        );
+    if (phase === 'story' && currentMonster) {
+      if (storyIndex < currentMonster.story.length) {
+        const timer = setTimeout(() => {
+          setStoryIndex(prev => prev + 1);
+        }, 1200);
+        return () => clearTimeout(timer);
+      } else {
+        const timer = setTimeout(() => {
+          setPhase('card');
+        }, 1500);
+        return () => clearTimeout(timer);
       }
-      requestAnimationFrame(animate);
-    };
-
-    const rafId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafId);
-  }, [currentMonster, faceBoundingBox]);
+    }
+  }, [phase, storyIndex, currentMonster]);
 
   const handleCapture = () => {
     if (!canvasRef.current || !videoRef.current) return;
@@ -194,8 +98,20 @@ export function MirrorPage() {
     }
   };
 
+  const handleReset = () => {
+    setPhase('idle');
+    setStoryIndex(0);
+    resetMonster();
+  };
+
   const handleVideoLoaded = () => {
     setVideoReady(true);
+  };
+
+  const getMonsterImageUrl = () => {
+    if (!currentMonster) return '';
+    const encodedPrompt = encodeURIComponent(currentMonster.imagePrompt);
+    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=600&height=800&nologo=true&model=flux&seed=${currentMonster.id}`;
   };
 
   if (error) {
@@ -228,16 +144,14 @@ export function MirrorPage() {
           muted
           className={cn(
             "absolute object-cover w-full h-full",
-            facingMode === 'user' && "scale-x-[-1]"
+            facingMode === 'user' && "scale-x-[-1]",
+            (phase === 'blackout' || phase === 'story' || phase === 'card') && "opacity-0"
           )}
         />
 
         <canvas
           ref={canvasRef}
-          className={cn(
-            "absolute object-cover w-full h-full pointer-events-none",
-            facingMode === 'user' && "scale-x-[-1]"
-          )}
+          className="absolute object-cover w-full h-full pointer-events-none opacity-0"
         />
 
         {!videoReady && (
@@ -265,64 +179,166 @@ export function MirrorPage() {
             </button>
           </div>
         )}
-
-        {videoReady && !faceBoundingBox && !detectionLoading && !detectionError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
-            <p className="text-white text-lg bg-black/40 px-6 py-3 rounded-full backdrop-blur-md">
-              请将人脸对准摄像头
-            </p>
-          </div>
-        )}
       </div>
 
-      <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-30">
-        <button
-          onClick={() => navigate('/')}
-          className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-
-        <div className="flex gap-2">
-          <button
-            onClick={resetMonster}
-            className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
-            title="换一个妖怪"
-          >
-            <Shuffle className="w-6 h-6" />
-          </button>
-
-          <button
-            onClick={toggleFacingMode}
-            className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
-          >
-            <RefreshCw className="w-6 h-6" />
-          </button>
-        </div>
-      </div>
-
-      {faceBoundingBox && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 text-center">
-          <div
-            className="px-6 py-3 rounded-full backdrop-blur-md text-white font-bold shadow-lg"
-            style={{ backgroundColor: `${currentMonster.color}50`, borderColor: currentMonster.color, borderWidth: 2 }}
-          >
-            <span className="text-2xl mr-2">{currentMonster.emoji}</span>
-            {currentMonster.name}
+      {phase === 'blackout' && (
+        <div className="absolute inset-0 bg-black z-40 flex items-center justify-center">
+          <div className="animate-pulse">
+            <div className="text-4xl mb-4">🔮</div>
+            <p className="text-purple-300 text-xl animate-pulse">照妖镜中...</p>
           </div>
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 p-6 pb-10 z-30">
-        <div className="flex flex-col items-center gap-4">
-          <button
-            onClick={handleCapture}
-            className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 transition-transform"
-          >
-            <div className="w-16 h-16 rounded-full border-4 border-gray-200 bg-white" />
-          </button>
+      {phase === 'story' && currentMonster && (
+        <div className="absolute inset-0 bg-black z-40 flex flex-col items-center justify-center p-6">
+          {currentMonster.story.slice(0, storyIndex).map((text, index) => (
+            <p
+              key={index}
+              className={cn(
+                "text-2xl font-bold text-center mb-4 transition-all duration-500",
+                index === storyIndex - 1
+                  ? "text-white animate-fadeIn"
+                  : "text-gray-500 scale-95"
+              )}
+              style={{ color: index === storyIndex - 1 ? currentMonster.color : undefined }}
+            >
+              {text}
+            </p>
+          ))}
         </div>
-      </div>
+      )}
+
+      {phase === 'card' && currentMonster && (
+        <div className="absolute inset-0 bg-black/95 z-40 flex items-center justify-center p-6">
+          <div className="w-full max-w-sm">
+            <div
+              className="bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-2 animate-fadeIn"
+              style={{ borderColor: currentMonster.color }}
+            >
+              <div className="aspect-[3/4] bg-gray-800 relative overflow-hidden">
+                <img
+                  src={getMonsterImageUrl()}
+                  alt={currentMonster.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-8xl">{currentMonster.emoji}</span>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              </div>
+
+              <div className="p-6">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <span className="text-4xl">{currentMonster.emoji}</span>
+                  <h2
+                    className="text-3xl font-bold"
+                    style={{ color: currentMonster.color }}
+                  >
+                    {currentMonster.name}
+                  </h2>
+                </div>
+                <p className="text-gray-300 text-center mb-6">
+                  {currentMonster.description}
+                </p>
+                <button
+                  onClick={handleCapture}
+                  className="w-full py-4 text-lg font-bold text-white rounded-2xl transition-all hover:scale-105 active:scale-95"
+                  style={{ backgroundColor: currentMonster.color }}
+                >
+                  📸 拍下这一刻
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleReset}
+              className="mt-6 w-full py-4 text-white bg-gray-800 rounded-2xl font-bold hover:bg-gray-700 transition-colors"
+            >
+              🔄 再测一次
+            </button>
+          </div>
+        </div>
+      )}
+
+      {phase === 'idle' && (
+        <>
+          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-30">
+            <button
+              onClick={() => navigate('/')}
+              className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+
+            <div className="flex gap-2">
+              <button
+                onClick={resetMonster}
+                className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
+                title="换一个妖怪"
+              >
+                <Shuffle className="w-6 h-6" />
+              </button>
+
+              <button
+                onClick={toggleFacingMode}
+                className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
+              >
+                <RefreshCw className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          {videoReady && !detectionLoading && !detectionError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
+              <p className="text-white text-lg bg-black/40 px-6 py-3 rounded-full backdrop-blur-md animate-pulse">
+                请将人脸对准摄像头
+              </p>
+            </div>
+          )}
+
+          {videoReady && !detectionLoading && !detectionError && (
+            <div className="absolute bottom-0 left-0 right-0 p-6 pb-10 z-30">
+              <div className="flex flex-col items-center gap-4">
+                <button
+                  onClick={handleCapture}
+                  className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 transition-transform"
+                >
+                  <div className="w-16 h-16 rounded-full border-4 border-gray-200 bg-white" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {phase === 'detecting' && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+          <div className="text-center">
+            <div className="w-32 h-32 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-purple-300 text-xl">正在检测中...</p>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }
