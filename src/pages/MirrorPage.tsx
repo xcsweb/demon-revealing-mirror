@@ -16,13 +16,42 @@ function cn(...inputs: ClassValue[]) {
 class SmoothBoundingBox {
   private current: { x: number; y: number; width: number; height: number } | null = null;
   private target: { x: number; y: number; width: number; height: number } | null = null;
-  private alpha = 0.3; // 平滑系数
+  private alpha = 0.15; // 更平滑的系数
+  private lastNFrames: Array<{ x: number; y: number; width: number; height: number }> = [];
+  private maxFrames = 5;
 
   update(target: { x: number; y: number; width: number; height: number } | null) {
     this.target = target;
     if (!this.current && target) {
       this.current = { ...target };
     }
+    if (target) {
+      this.lastNFrames.push({ ...target });
+      if (this.lastNFrames.length > this.maxFrames) {
+        this.lastNFrames.shift();
+      }
+    } else {
+      this.lastNFrames = [];
+    }
+  }
+
+  // 计算移动平均
+  private getAverage() {
+    if (this.lastNFrames.length === 0) return null;
+    const sum = { x: 0, y: 0, width: 0, height: 0 };
+    this.lastNFrames.forEach(box => {
+      sum.x += box.x;
+      sum.y += box.y;
+      sum.width += box.width;
+      sum.height += box.height;
+    });
+    const n = this.lastNFrames.length;
+    return {
+      x: sum.x / n,
+      y: sum.y / n,
+      width: sum.width / n,
+      height: sum.height / n
+    };
   }
 
   get() {
@@ -36,11 +65,14 @@ class SmoothBoundingBox {
       return this.current;
     }
 
+    // 使用移动平均后的目标值
+    const avgTarget = this.getAverage() || this.target;
+
     // 平滑过渡
-    this.current.x += (this.target.x - this.current.x) * this.alpha;
-    this.current.y += (this.target.y - this.current.y) * this.alpha;
-    this.current.width += (this.target.width - this.current.width) * this.alpha;
-    this.current.height += (this.target.height - this.current.height) * this.alpha;
+    this.current.x += (avgTarget.x - this.current.x) * this.alpha;
+    this.current.y += (avgTarget.y - this.current.y) * this.alpha;
+    this.current.width += (avgTarget.width - this.current.width) * this.alpha;
+    this.current.height += (avgTarget.height - this.current.height) * this.alpha;
 
     return this.current;
   }
