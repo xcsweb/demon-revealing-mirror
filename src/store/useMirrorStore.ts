@@ -1,40 +1,32 @@
 import { create } from 'zustand';
-import { EffectType, FaceBoundingBox } from '@/types';
+import { FaceBoundingBox, Monster } from '@/types';
+import { MONSTERS, getRandomMonster } from '@/utils/monsters';
 
 interface MirrorState {
-  // 摄像头状态
-  cameraActive: boolean;
   facingMode: 'user' | 'environment';
-  
-  // 人脸检测状态
   faceDetected: boolean;
   faceBoundingBox: FaceBoundingBox | null;
   faceLandmarks: any | null;
-  
-  // 特效状态
-  currentEffect: EffectType;
-  
-  // 截图状态
+  currentMonster: Monster;
+  autoCaptureActive: boolean;
   capturedImage: string | null;
-  
-  // Actions
-  setCameraActive: (active: boolean) => void;
   toggleFacingMode: () => void;
   setFaceDetected: (detected: boolean, box?: FaceBoundingBox | null, landmarks?: any) => void;
-  setCurrentEffect: (effect: EffectType) => void;
+  setCurrentMonster: (monster: Monster) => void;
+  setAutoCaptureActive: (active: boolean) => void;
   setCapturedImage: (image: string | null) => void;
+  resetMonster: () => void;
 }
 
 export const useMirrorStore = create<MirrorState>((set) => ({
-  cameraActive: false,
   facingMode: 'user',
   faceDetected: false,
   faceBoundingBox: null,
   faceLandmarks: null,
-  currentEffect: 'full-demon',
+  currentMonster: getRandomMonster(),
+  autoCaptureActive: true,
   capturedImage: null,
   
-  setCameraActive: (active) => set({ cameraActive: active }),
   toggleFacingMode: () => set((state) => ({ 
     facingMode: state.facingMode === 'user' ? 'environment' : 'user' 
   })),
@@ -43,6 +35,8 @@ export const useMirrorStore = create<MirrorState>((set) => ({
     faceBoundingBox: box, 
     faceLandmarks: landmarks 
   }),
-  setCurrentEffect: (effect) => set({ currentEffect: effect }),
+  setCurrentMonster: (monster) => set({ currentMonster: monster }),
+  setAutoCaptureActive: (active) => set({ autoCaptureActive: active }),
   setCapturedImage: (image) => set({ capturedImage: image }),
+  resetMonster: () => set({ currentMonster: getRandomMonster() }),
 }));

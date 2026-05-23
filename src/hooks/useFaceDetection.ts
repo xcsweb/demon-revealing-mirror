@@ -24,9 +24,10 @@ export function useFaceDetection(videoElement: HTMLVideoElement | null, options:
       
       faceDetectionRef.current = faceDetection;
 
+      // 降低检测阈值，提高识别率
       faceDetection.setOptions({
         model: 'short',
-        minDetectionConfidence: 0.5
+        minDetectionConfidence: 0.3 // 降低阈值，更容易检测到人脸
       });
 
       faceDetection.onResults((results) => {

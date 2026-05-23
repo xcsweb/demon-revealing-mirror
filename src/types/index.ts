@@ -21,3 +21,19 @@ export interface DetectionResult {
   boundingBox: FaceBoundingBox;
   landmarks: FaceLandmarks;
 }
+
+export interface Monster {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  description: string;
+  features: {
+    horns?: boolean;
+    wings?: boolean;
+    fangs?: boolean;
+    fire?: boolean;
+    halo?: boolean;
+    glowingEyes?: boolean;
+  };
+}

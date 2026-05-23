@@ -34,7 +34,7 @@ export function ResultPage() {
       {/* 顶部导航 */}
       <div className="p-4 flex items-center justify-between">
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/mirror')}
           className="p-3 bg-gray-800 rounded-full text-white hover:bg-gray-700 transition-colors"
         >
           <ArrowLeft className="w-6 h-6" />
