@@ -123,6 +123,7 @@ async function testPerformance() {
   
   const checks = [
     { name: '包含 id="root"', pattern: 'id="root"' },
+    { name: '包含 base 标签', pattern: '<base' },
     { name: '包含脚本标签', pattern: '<script' },
     { name: '包含样式标签', pattern: '<link' },
     { name: '包含 favicon', pattern: 'favicon' },
@@ -159,11 +160,13 @@ async function testPerformance() {
 
   // 6. 检查是否有常见的错误源
   console.log('\n📊 测试 5: 潜在问题检查');
-  const issues = [];
   
   // 检查 base URL
-  if (!html.includes('base')) {
-    console.log('  ⚠️ 可能缺少 base URL 配置');
+  if (html.includes('<base')) {
+    console.log('  ✅ base URL 配置正确');
+  } else {
+    console.log('  ❌ 缺少 base URL 配置');
+    allOk = false;
   }
   
   // 检查脚本类型
@@ -176,8 +179,8 @@ async function testPerformance() {
   // 总结
   console.log('\n' + '='.repeat(60));
   if (allOk) {
-    console.log('✅ 主要功能测试通过！部署看起来正常。');
-    console.log('\n💡 如果页面仍然是白板，请尝试:');
+    console.log('✅ 所有测试通过！部署看起来正常。');
+    console.log('\n💡 如果仍然有问题，请尝试:');
     console.log('   1. 清除浏览器缓存并刷新');
     console.log('   2. 使用浏览器开发者工具检查控制台错误');
     console.log('   3. 检查网络面板看资源加载状态');
