@@ -25,6 +25,7 @@ export function MirrorPage() {
   const [phase, setPhase] = useState<Phase>('idle');
   const [storyIndex, setStoryIndex] = useState(0);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleFaceDetected = useCallback((box: any, landmarks: any) => {
@@ -59,8 +60,9 @@ export function MirrorPage() {
 
   useEffect(() => {
     if (phase === 'story' && currentMonster) {
-      // 进入 story 阶段时重置 imageLoadError
+      // 进入 story 阶段时重置图片状态
       setImageLoadError(false);
+      setImageLoading(true);
       
       if (storyIndex < currentMonster.story.length) {
         const timer = setTimeout(() => {
@@ -84,6 +86,7 @@ export function MirrorPage() {
     setPhase('idle');
     setStoryIndex(0);
     setImageLoadError(false);
+    setImageLoading(true);
     resetMonster();
   };
 
@@ -93,10 +96,15 @@ export function MirrorPage() {
     setIsSaving(true);
     
     try {
+      // 等待图片加载完成
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: '#111827',
         scale: 2,
         useCORS: true,
+        allowTaint: true,
+        imageTimeout: 0,
       });
       
       const link = document.createElement('a');
@@ -105,6 +113,7 @@ export function MirrorPage() {
       link.click();
     } catch (error) {
       console.error('保存失败:', error);
+      alert('保存失败，请重试');
     } finally {
       setIsSaving(false);
     }
@@ -227,11 +236,21 @@ export function MirrorPage() {
                 style={{ borderColor: currentMonster.color }}
               >
                 <div className="aspect-[3/4] bg-gray-800 relative overflow-hidden">
+                  {imageLoading && !imageLoadError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
+                      <div className="text-center">
+                        <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
+                        <p className="text-gray-400 text-sm">正在生成图片...</p>
+                      </div>
+                    </div>
+                  )}
                   <img
                     src={getMonsterImageUrl()}
                     alt={currentMonster.name}
                     className="w-full h-full object-cover"
+                    onLoad={() => setImageLoading(false)}
                     onError={() => {
+                      setImageLoading(false);
                       setImageLoadError(true);
                     }}
                   />

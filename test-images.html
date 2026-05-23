@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片加载测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .test-item {
+            background: #2a2a2a;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .test-item img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .test-item .info {
+            font-size: 14px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        .loading {
+            background: #f59e0b;
+            color: black;
+        }
+        .success {
+            background: #10b981;
+        }
+        .error {
+            background: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <h1>照妖镜图片加载测试</h1>
+    <p>测试 pollinations.ai 图片是否能正常加载</p>
+    
+    <div class="test-container" id="testContainer"></div>
+
+    <script>
+        const testImages = [
+            {
+                name: '青牛精',
+                prompt: 'Chinese mythology blue ox demon, traditional Chinese painting style, powerful and majestic, holding a golden vajra bracelet, ancient Chinese mountain background'
+            },
+            {
+                name: '白骨精',
+                prompt: 'Chinese mythology Baigujing skeleton demoness, beautiful but eerie, wearing white silk robes, floating in a dark cave, traditional Chinese ink painting style'
+            },
+            {
+                name: '牛魔王',
+                prompt: 'Chinese mythology Bull Demon King, muscular red bull head, wearing black armor, holding a huge iron staff, standing on a fiery mountain, dramatic lighting'
+            },
+            {
+                name: '金翅大鹏',
+                prompt: 'Chinese mythology Golden Winged Great Peng, magnificent golden eagle with enormous wings, piercing golden eyes, soaring through clouds, traditional Chinese art style'
+            },
+            {
+                name: '九尾狐狸精',
+                prompt: 'Chinese mythology nine-tailed fox spirit Daji, stunningly beautiful woman with nine golden fox tails, enchanting smile, wearing luxurious ancient Chinese robes, mystical atmosphere'
+            }
+        ];
+
+        const container = document.getElementById('testContainer');
+
+        testImages.forEach((img, index) => {
+            const div = document.createElement('div');
+            div.className = 'test-item';
+            
+            const imgTag = document.createElement('img');
+            const encodedPrompt = encodeURIComponent(img.prompt);
+            const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=600&height=800&nologo=true&model=flux&seed=${index}`;
+            
+            imgTag.src = url;
+            
+            const status = document.createElement('span');
+            status.className = 'status loading';
+            status.textContent = '加载中...';
+            
+            imgTag.onload = () => {
+                status.className = 'status success';
+                status.textContent = '✓ 成功';
+            };
+            
+            imgTag.onerror = () => {
+                status.className = 'status error';
+                status.textContent = '✗ 失败';
+            };
+            
+            div.innerHTML = `
+                <div class="info">
+                    <strong>${img.name}</strong>
+                    <br>
+                    <small>URL: ${url.substring(0, 80)}...</small>
+                </div>
+            `;
+            div.appendChild(imgTag);
+            div.appendChild(status);
+            
+            container.appendChild(div);
+        });
+    </script>
+</body>
+</html>
