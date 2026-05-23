@@ -8,12 +8,10 @@ interface MirrorState {
   faceBoundingBox: FaceBoundingBox | null;
   faceLandmarks: any | null;
   currentMonster: Monster;
-  autoCaptureActive: boolean;
   capturedImage: string | null;
   toggleFacingMode: () => void;
   setFaceDetected: (detected: boolean, box?: FaceBoundingBox | null, landmarks?: any) => void;
   setCurrentMonster: (monster: Monster) => void;
-  setAutoCaptureActive: (active: boolean) => void;
   setCapturedImage: (image: string | null) => void;
   resetMonster: () => void;
 }
@@ -24,7 +22,6 @@ export const useMirrorStore = create<MirrorState>((set) => ({
   faceBoundingBox: null,
   faceLandmarks: null,
   currentMonster: getRandomMonster(),
-  autoCaptureActive: true,
   capturedImage: null,
   
   toggleFacingMode: () => set((state) => ({ 
@@ -36,7 +33,6 @@ export const useMirrorStore = create<MirrorState>((set) => ({
     faceLandmarks: landmarks 
   }),
   setCurrentMonster: (monster) => set({ currentMonster: monster }),
-  setAutoCaptureActive: (active) => set({ autoCaptureActive: active }),
   setCapturedImage: (image) => set({ capturedImage: image }),
   resetMonster: () => set({ currentMonster: getRandomMonster() }),
 }));

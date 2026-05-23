@@ -12,6 +12,40 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// 用于平滑人脸框过渡的类
+class SmoothBoundingBox {
+  private current: { x: number; y: number; width: number; height: number } | null = null;
+  private target: { x: number; y: number; width: number; height: number } | null = null;
+  private alpha = 0.3; // 平滑系数
+
+  update(target: { x: number; y: number; width: number; height: number } | null) {
+    this.target = target;
+    if (!this.current && target) {
+      this.current = { ...target };
+    }
+  }
+
+  get() {
+    if (!this.target) {
+      this.current = null;
+      return null;
+    }
+
+    if (!this.current) {
+      this.current = { ...this.target };
+      return this.current;
+    }
+
+    // 平滑过渡
+    this.current.x += (this.target.x - this.current.x) * this.alpha;
+    this.current.y += (this.target.y - this.current.y) * this.alpha;
+    this.current.width += (this.target.width - this.current.width) * this.alpha;
+    this.current.height += (this.target.height - this.current.height) * this.alpha;
+
+    return this.current;
+  }
+}
+
 export function MirrorPage() {
   const navigate = useNavigate();
   const {
@@ -21,24 +55,22 @@ export function MirrorPage() {
     setCapturedImage,
     faceBoundingBox,
     currentMonster,
-    setCurrentMonster,
     resetMonster,
-    autoCaptureActive,
-    setAutoCaptureActive,
   } = useMirrorStore();
 
   const { videoRef, error } = useCamera(facingMode);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const smoothBoxRef = useRef<SmoothBoundingBox>(new SmoothBoundingBox());
   const [videoReady, setVideoReady] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
-  const [canAutoCapture, setCanAutoCapture] = useState(true);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const lastBoxRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
   const handleFaceDetected = useCallback((box: any, landmarks: any) => {
-    if (!faceBoundingBox) {
+    if (!lastBoxRef.current) {
       resetMonster();
     }
     
+    // MediaPipe 返回的是归一化坐标，直接传递
     setFaceDetected(true, {
       x: box.xCenter - box.width / 2,
       y: box.yCenter - box.height / 2,
@@ -46,19 +78,17 @@ export function MirrorPage() {
       height: box.height
     }, landmarks);
     
-    if (canAutoCapture && autoCaptureActive) {
-      setCanAutoCapture(false);
-      if (autoCaptureActive) {
-        setTimeout(() => {
-          handleCapture();
-          setCanAutoCapture(true);
-        }, 1500);
-      }
-    }
-  }, [setFaceDetected, resetMonster, faceBoundingBox, canAutoCapture, autoCaptureActive]);
+    lastBoxRef.current = {
+      x: box.xCenter - box.width / 2,
+      y: box.yCenter - box.height / 2,
+      width: box.width,
+      height: box.height
+    };
+  }, [setFaceDetected, resetMonster]);
 
   const handleFaceLost = useCallback(() => {
     setFaceDetected(false);
+    lastBoxRef.current = null;
   }, [setFaceDetected]);
 
   const { isReady: detectionReady, error: detectionError, isLoading: detectionLoading } = useFaceDetection(
@@ -82,14 +112,24 @@ export function MirrorPage() {
           canvas.height = video.videoHeight;
         }
 
+        // 更新平滑器
+        smoothBoxRef.current.update(faceBoundingBox ? {
+          x: faceBoundingBox.x,
+          y: faceBoundingBox.y,
+          width: faceBoundingBox.width,
+          height: faceBoundingBox.height
+        } : null);
+        
+        const smoothBox = smoothBoxRef.current.get();
+
         drawMonsterEffect(
           ctx,
           currentMonster,
-          faceBoundingBox ? {
-            xCenter: faceBoundingBox.x + (faceBoundingBox.width / 2),
-            yCenter: faceBoundingBox.y + (faceBoundingBox.height / 2),
-            width: faceBoundingBox.width,
-            height: faceBoundingBox.height
+          smoothBox ? {
+            xCenter: smoothBox.x + (smoothBox.width / 2),
+            yCenter: smoothBox.y + (smoothBox.height / 2),
+            width: smoothBox.width,
+            height: smoothBox.height
           } : null,
           canvas.width,
           canvas.height
@@ -213,19 +253,6 @@ export function MirrorPage() {
 
         <div className="flex gap-2">
           <button
-            onClick={() => setAutoCaptureActive(!autoCaptureActive)}
-            className={cn(
-              "p-3 backdrop-blur-md rounded-full transition-colors",
-              autoCaptureActive
-                ? "bg-yellow-500/40 text-yellow-200 hover:bg-yellow-500/60"
-                : "bg-black/40 text-white hover:bg-black/60"
-            )}
-            title={autoCaptureActive ? "自动拍照已开启" : "自动拍照已关闭"}
-          >
-            {autoCaptureActive ? "⏱️" : "📷"}
-          </button>
-
-          <button
             onClick={resetMonster}
             className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
             title="换一个妖怪"
@@ -242,15 +269,17 @@ export function MirrorPage() {
         </div>
       </div>
 
-      <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 text-center">
-        <div
-          className="px-6 py-3 rounded-full backdrop-blur-md text-white font-bold shadow-lg"
-          style={{ backgroundColor: `${currentMonster.color}50`, borderColor: currentMonster.color, borderWidth: 2 }}
-        >
-          <span className="text-2xl mr-2">{currentMonster.emoji}</span>
-          {currentMonster.name}
+      {faceBoundingBox && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 text-center">
+          <div
+            className="px-6 py-3 rounded-full backdrop-blur-md text-white font-bold shadow-lg"
+            style={{ backgroundColor: `${currentMonster.color}50`, borderColor: currentMonster.color, borderWidth: 2 }}
+          >
+            <span className="text-2xl mr-2">{currentMonster.emoji}</span>
+            {currentMonster.name}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="absolute bottom-0 left-0 right-0 p-6 pb-10 z-30">
         <div className="flex flex-col items-center gap-4">
@@ -260,12 +289,6 @@ export function MirrorPage() {
           >
             <div className="w-16 h-16 rounded-full border-4 border-gray-200 bg-white" />
           </button>
-
-          {autoCaptureActive && (
-            <div className="text-yellow-300 text-sm animate-pulse">
-              检测到人脸后将自动拍照...
-            </div>
-          )}
         </div>
       </div>
     </div>
