@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Shuffle } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useCamera } from '@/hooks/useCamera';
 import { useFaceDetection } from '@/hooks/useFaceDetection';
 import { useMirrorStore } from '@/store/useMirrorStore';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 
-function cn(...inputs: any[]) {
-  return twMerge(clsx(inputs));
-}
 
 type Phase = 'idle' | 'detecting' | 'blackout' | 'story' | 'card' | 'result';
 
@@ -19,16 +14,12 @@ export function MirrorPage() {
     facingMode,
     toggleFacingMode,
     setFaceDetected,
-    setCapturedImage,
     currentMonster,
-    resetMonster,
-    setCurrentMonster
+    resetMonster
   } = useMirrorStore();
 
   const { videoRef, error } = useCamera(facingMode);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [videoReady, setVideoReady] = useState(false);
-  const [isFlashing, setIsFlashing] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [storyIndex, setStoryIndex] = useState(0);
 
@@ -78,32 +69,6 @@ export function MirrorPage() {
     }
   }, [phase, storyIndex, currentMonster]);
 
-  const handleCapture = () => {
-    if (!canvasRef.current || !videoRef.current) return;
-
-    setIsFlashing(true);
-    setTimeout(() => setIsFlashing(false), 150);
-
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = videoRef.current.videoWidth;
-    tempCanvas.height = videoRef.current.videoHeight;
-    const tempCtx = tempCanvas.getContext('2d');
-
-    if (tempCtx) {
-      tempCtx.drawImage(videoRef.current, 0, 0);
-      tempCtx.drawImage(canvasRef.current, 0, 0);
-      const imageData = tempCanvas.toDataURL('image/jpeg', 0.9);
-      setCapturedImage(imageData);
-      navigate('/result');
-    }
-  };
-
-  const handleReset = () => {
-    setPhase('idle');
-    setStoryIndex(0);
-    resetMonster();
-  };
-
   const handleVideoLoaded = () => {
     setVideoReady(true);
   };
@@ -131,10 +96,6 @@ export function MirrorPage() {
 
   return (
     <div className="relative min-h-screen bg-black overflow-hidden select-none">
-      {isFlashing && (
-        <div className="absolute inset-0 bg-white z-50 animate-pulse" />
-      )}
-
       <div className="absolute inset-0 flex items-center justify-center bg-black">
         <video
           ref={videoRef}
@@ -142,16 +103,7 @@ export function MirrorPage() {
           autoPlay
           playsInline
           muted
-          className={cn(
-            "absolute object-cover w-full h-full",
-            facingMode === 'user' && "scale-x-[-1]",
-            (phase === 'blackout' || phase === 'story' || phase === 'card') && "opacity-0"
-          )}
-        />
-
-        <canvas
-          ref={canvasRef}
-          className="absolute object-cover w-full h-full pointer-events-none opacity-0"
+          className={`absolute object-cover w-full h-full ${facingMode === 'user' ? 'scale-x-[-1]' : ''} ${(phase === 'blackout' || phase === 'story' || phase === 'card') ? 'opacity-0' : ''}`}
         />
 
         {!videoReady && (
@@ -195,12 +147,7 @@ export function MirrorPage() {
           {currentMonster.story.slice(0, storyIndex).map((text, index) => (
             <p
               key={index}
-              className={cn(
-                "text-2xl font-bold text-center mb-4 transition-all duration-500",
-                index === storyIndex - 1
-                  ? "text-white animate-fadeIn"
-                  : "text-gray-500 scale-95"
-              )}
+              className={`text-2xl font-bold text-center mb-4 transition-all duration-500 ${index === storyIndex - 1 ? 'text-white animate-fadeIn' : 'text-gray-500 scale-95'}`}
               style={{ color: index === storyIndex - 1 ? currentMonster.color : undefined }}
             >
               {text}
@@ -241,13 +188,6 @@ export function MirrorPage() {
                 <p className="text-gray-300 text-center mb-6">
                   {currentMonster.description}
                 </p>
-                <button
-                  onClick={handleCapture}
-                  className="w-full py-4 text-lg font-bold text-white rounded-2xl transition-all hover:scale-105 active:scale-95"
-                  style={{ backgroundColor: currentMonster.color }}
-                >
-                  📸 拍下这一刻
-                </button>
               </div>
             </div>
           </div>
@@ -264,42 +204,19 @@ export function MirrorPage() {
               <ArrowLeft className="w-6 h-6" />
             </button>
 
-            <div className="flex gap-2">
-              <button
-                onClick={resetMonster}
-                className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
-                title="换一个妖怪"
-              >
-                <Shuffle className="w-6 h-6" />
-              </button>
-
-              <button
-                onClick={toggleFacingMode}
-                className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
-              >
-                <RefreshCw className="w-6 h-6" />
-              </button>
-            </div>
+            <button
+              onClick={toggleFacingMode}
+              className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
+            >
+              <RefreshCw className="w-6 h-6" />
+            </button>
           </div>
 
           {videoReady && !detectionLoading && !detectionError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
               <p className="text-white text-lg bg-black/40 px-6 py-3 rounded-full backdrop-blur-md animate-pulse">
-                请将人脸对准摄像头
+                照妖镜已就绪，请对准人脸
               </p>
-            </div>
-          )}
-
-          {videoReady && !detectionLoading && !detectionError && (
-            <div className="absolute bottom-0 left-0 right-0 p-6 pb-10 z-30">
-              <div className="flex flex-col items-center gap-4">
-                <button
-                  onClick={handleCapture}
-                  className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 transition-transform"
-                >
-                  <div className="w-16 h-16 rounded-full border-4 border-gray-200 bg-white" />
-                </button>
-              </div>
             </div>
           )}
         </>
