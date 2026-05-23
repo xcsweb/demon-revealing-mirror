@@ -4,6 +4,7 @@ import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useCamera } from '@/hooks/useCamera';
 import { useFaceDetection } from '@/hooks/useFaceDetection';
 import { useMirrorStore } from '@/store/useMirrorStore';
+import { MONSTER_IMAGES } from '@/assets/monster-images';
 
 
 type Phase = 'idle' | 'detecting' | 'blackout' | 'story' | 'card' | 'result';
@@ -86,7 +87,7 @@ export function MirrorPage() {
 
   const getMonsterImageUrl = () => {
     if (!currentMonster) return '';
-    return `/images/monsters/${currentMonster.id}.png`;
+    return MONSTER_IMAGES[currentMonster.id] || '';
   };
 
   if (error) {
