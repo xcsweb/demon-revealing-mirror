@@ -34,9 +34,7 @@ export function MirrorPage() {
   const [canAutoCapture, setCanAutoCapture] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 处理人脸检测结果 - 检测到人脸时随机分配妖怪
   const handleFaceDetected = useCallback((box: any, landmarks: any) => {
-    // 如果之前没有检测到人脸，这次才分配新妖怪
     if (!faceBoundingBox) {
       resetMonster();
     }
@@ -48,7 +46,6 @@ export function MirrorPage() {
       height: box.height
     }, landmarks);
     
-    // 只有当第一次检测到人脸时才随机分配妖怪
     if (canAutoCapture && autoCaptureActive) {
       setCanAutoCapture(false);
       if (autoCaptureActive) {
@@ -62,10 +59,9 @@ export function MirrorPage() {
 
   const handleFaceLost = useCallback(() => {
     setFaceDetected(false);
-    // 人脸消失后，下次再检测到会重新分配妖怪
   }, [setFaceDetected]);
 
-  const { isReady: detectionReady } = useFaceDetection(
+  const { isReady: detectionReady, error: detectionError, isLoading: detectionLoading } = useFaceDetection(
     videoReady ? videoRef.current : null,
     { onFaceDetected: handleFaceDetected, onFaceLost: handleFaceLost }
   );
@@ -179,7 +175,26 @@ export function MirrorPage() {
           </div>
         )}
 
-        {videoReady && !faceBoundingBox && (
+        {detectionLoading && videoReady && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-20">
+            <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-yellow-300 text-lg">加载人脸检测中...</p>
+          </div>
+        )}
+
+        {detectionError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/80 z-30">
+            <p className="text-red-300 text-lg mb-4">⚠️ {detectionError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors"
+            >
+              重新加载
+            </button>
+          </div>
+        )}
+
+        {videoReady && !faceBoundingBox && !detectionLoading && !detectionError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
             <p className="text-white text-lg bg-black/40 px-6 py-3 rounded-full backdrop-blur-md">
               请将人脸对准摄像头
