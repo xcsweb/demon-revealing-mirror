@@ -1,0 +1,199 @@
+{
+  "version": "2026-05-24",
+  "source": "Official Taobao 618 rules + verified web sources",
+  
+  "cross_store_discount": {
+    "name": "跨店满减",
+    "full_period": {
+      "threshold": 300,
+      "discount": 50,
+      "description": "每满300减50，全周期统一，上不封顶，可跨店叠加"
+    },
+    "peak_period": {
+      "threshold": 300,
+      "discount": 50,
+      "description": "高潮期同样为每满300减50，部分商品可能加码到每满300减60"
+    },
+    "calculation": "floor(amount / 300) * 50",
+    "notes": "不同店铺商品合并结算时按总金额计算档位，每个300的整数倍减50"
+  },
+  
+  "88vip_coupons": {
+    "name": "88VIP家装潮电消费券",
+    "basic_coupons": [
+      {"threshold": 200, "discount": 25, "description": "小额刚需、服饰美妆首选"},
+      {"threshold": 480, "discount": 60, "description": "日常囤货、中小件适配"},
+      {"threshold": 1500, "discount": 180, "description": "数码小家电、大家电配件适用"},
+      {"threshold": 3000, "discount": 400, "description": "大额必用，冰箱电视手机等高客单专属"}
+    ],
+    "bonus_coupon": {
+      "threshold": 5000,
+      "discount": 650,
+      "description": "限时解锁大额券，仅适用于5000元以上订单，5月31日前解锁"
+    },
+    "total_coupons": 5,
+    "total_value": 1315,
+    "usage_rules": {
+      "each_coupon_once": true,
+      "no_splitting": true,
+      "stackable_with": ["超级红包", "跨店满减", "店铺券", "国补", "88VIP 95折"],
+      "valid_period": "5月12日 - 6月20日",
+      "applicable_products": "全品类通用（虚拟商品、部分生鲜、特例商品除外）"
+    }
+  },
+  
+  "government_subsidy": {
+    "name": "国家以旧换新补贴（国补）",
+    "total_budget": "625亿元",
+    "valid_period": "4月10日 - 12月31日",
+    "categories": {
+      "home_appliances": {
+        "name": "家电类",
+        "products": ["空调", "冰箱", "洗衣机", "电视", "热水器", "电脑"],
+        "discount_rate": 0.15,
+        "max_discount": 1500,
+        "requirement": "仅限一级能效/水效产品",
+        "description": "成交价15%直减，单件最高1500元"
+      },
+      "3c_digital": {
+        "name": "3C数码类",
+        "products": ["手机", "平板", "智能手表", "智能眼镜"],
+        "discount_rate": 0.15,
+        "max_discount": 500,
+        "requirement": "单价≤6000元的全新国行正品",
+        "description": "成交价15%直减，单件最高500元"
+      }
+    },
+    "rules": {
+      "per_category_limit": 1,
+      "description": "每人每品类限领1件（家电限1件、数码限1件，可同时申领）",
+      "stackable": true,
+      "apple_included": true,
+      "notes": "2025年领过补贴的用户2026年可重复申领"
+    },
+    "furniture_eligibility": {
+      "eligible": "部分智能家具/节能家具可能有资格",
+      "check": "以商品详情页'政府补贴'标识为准",
+      "notes": "传统家具（床、沙发、餐桌）通常不在国补范围内，但部分智能/节能家具可能符合"
+    }
+  },
+  
+  "discount_stacking_order": {
+    "name": "优惠叠加顺序",
+    "order": [
+      {
+        "step": 1,
+        "name": "店铺优惠",
+        "description": "官方立减/店铺券/限时折扣券（如蓝盒子9.7折）"
+      },
+      {
+        "step": 2,
+        "name": "跨店满减",
+        "description": "每满300减50（全周期统一）"
+      },
+      {
+        "step": 3,
+        "name": "品类券",
+        "description": "天猫超市/服饰/美妆等品类专属券"
+      },
+      {
+        "step": 4,
+        "name": "88VIP消费券",
+        "description": "家装潮电消费券（满200/480/1500/3000/5000）"
+      },
+      {
+        "step": 5,
+        "name": "超级红包",
+        "description": "无门槛红包（每日可领，可叠加）"
+      },
+      {
+        "step": 6,
+        "name": "政府补贴",
+        "description": "国补（家电15%/数码15%）"
+      },
+      {
+        "step": 7,
+        "name": "88VIP会员折扣",
+        "description": "全店参与大促商品95折（部分商品有额外店铺折扣如9.7折）"
+      }
+    ],
+    "formula": "到手价 = 原价 - 店铺优惠 - 跨店满减 - 品类券 - 88VIP消费券 - 红包 - 国补 - 88VIP折扣",
+    "notes": "所有优惠可叠加，国补+红包+满减三重叠加家电最高省1500元"
+  },
+  
+  "store_rules": {
+    "林氏家居": {
+      "name": "林氏家居旗舰店",
+      "official_discount": {
+        "name": "官方立减",
+        "description": "部分商品有官方立减优惠"
+      },
+      "vip_discount": null,
+      "government_subsidy_eligible": "部分商品可能有资格，以商品详情页为准",
+      "notes": "家具类商品，传统家具通常不在国补范围内"
+    },
+    "蓝盒子": {
+      "name": "蓝盒子官方旗舰店",
+      "official_discount": {
+        "name": "9.7折限时折扣券",
+        "rate": 0.97,
+        "description": "蓝盒子商品专享9.7折无门槛限时折扣券"
+      },
+      "vip_discount": null,
+      "government_subsidy_eligible": "床垫类商品可能有资格，以商品详情页'政府补贴'标识为准",
+      "notes": "床垫可能属于节能/智能家具范畴，需核实具体商品"
+    },
+    "全友家居": {
+      "name": "全友家居旗舰店",
+      "official_discount": {
+        "name": "官方立减",
+        "description": "部分商品有官方立减优惠"
+      },
+      "vip_discount": null,
+      "government_subsidy_eligible": "部分商品可能有资格，以商品详情页为准",
+      "notes": "家具类商品"
+    }
+  },
+  
+  "event_timeline": {
+    "full_period": "5月12日20:00 - 6月20日24:00",
+    "phases": [
+      {
+        "name": "预热领券期",
+        "period": "5月12日 - 5月30日",
+        "description": "领超级红包、加购心仪商品、领券锁优惠"
+      },
+      {
+        "name": "开门红爆发期",
+        "period": "5月30日20:00 - 6月3日",
+        "description": "第一波低价高峰，国补额度最充足"
+      },
+      {
+        "name": "品类专场期",
+        "period": "6月4日 - 6月14日",
+        "description": "每日品类专场，错峰下单"
+      },
+      {
+        "name": "终极狂欢期",
+        "period": "6月15日20:00 - 6月20日",
+        "description": "全品类最后一波优惠，价格触底"
+      }
+    ],
+    "best_buying_time": "5月30日晚8点（开门红）或6月15-18日（终极狂欢期）"
+  },
+  
+  "red_packet": {
+    "name": "淘宝超级红包",
+    "max_amount": 26888,
+    "daily_limit": 1,
+    "stackable": true,
+    "no_threshold": true,
+    "codes": [
+      "福气红包88800",
+      "好事连连2255",
+      "好运红包22233"
+    ],
+    "bonus_time": "每日20点后加码，大额概率更高",
+    "notes": "无门槛全品类通用，可叠加所有优惠"
+  }
+}
